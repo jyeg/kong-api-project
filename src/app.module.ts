@@ -5,6 +5,7 @@ import { dataSourceOptions } from './dataSource';
 import { UserModule } from './modules/user/user.module';
 import { ServiceGroupModule } from './modules/service-group/service-group.module';
 import { TeamModule } from './modules/team/team.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { TeamModule } from './modules/team/team.module';
       envFilePath: '.env',
     }),
     TypeOrmModule.forRoot(dataSourceOptions),
+    AuthModule,
     UserModule,
     ServiceGroupModule,
     TeamModule,
