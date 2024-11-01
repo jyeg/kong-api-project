@@ -1,15 +1,9 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  ManyToOne,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
 import { ServiceGroup } from '../../service-group/entities/service-group.entity';
+import { AuditableEntity } from '../../../common/entities';
 
 @Entity('versions')
-export class Version {
+export class Version extends AuditableEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -19,20 +13,14 @@ export class Version {
   service: ServiceGroup;
 
   @Column({ length: 50 })
-  version_number: string;
+  versionNumber: string;
 
   @Column({ type: 'date', nullable: true })
-  release_date: Date;
+  releaseDate: Date;
 
   @Column({ type: 'text', nullable: true })
   changelog: string;
 
   @Column({ length: 255, nullable: true })
-  documentation_url: string;
-
-  @CreateDateColumn()
-  created_at: Date;
-
-  @UpdateDateColumn()
-  updated_at: Date;
+  documentationUrl: string;
 }

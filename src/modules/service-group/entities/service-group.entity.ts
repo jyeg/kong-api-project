@@ -2,16 +2,15 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  CreateDateColumn,
-  UpdateDateColumn,
   ManyToOne,
   OneToMany,
 } from 'typeorm';
 import { Team } from '../../team/entities/team.entity';
 import { Version } from '../../version/entities/version.entity';
+import { AuditableEntity } from '../../../common/entities';
 
 @Entity('service_groups')
-export class ServiceGroup {
+export class ServiceGroup extends AuditableEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -27,14 +26,15 @@ export class ServiceGroup {
   @Column('simple-array', { nullable: true })
   tags: string[];
 
+  // @Column({
+  //   type: 'tsvector',
+  //   nullable: true,
+
+  // })
+  // fullTextSearch: string;
+
   @Column({ length: 50, nullable: true })
   status: string;
-
-  @CreateDateColumn()
-  created_at: Date;
-
-  @UpdateDateColumn()
-  updated_at: Date;
 
   @OneToMany(() => Version, (version) => version.service)
   versions: Version[];

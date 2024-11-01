@@ -3,7 +3,7 @@ import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { config } from 'dotenv';
 import { join } from 'path';
 
-config(); // Load .env file
+config();
 
 const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',

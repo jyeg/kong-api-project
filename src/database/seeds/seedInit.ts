@@ -4,6 +4,7 @@ import { ServiceGroup } from '../../modules/service-group/entities/service-group
 import { Version } from '../../modules/version/entities/version.entity';
 import * as bcrypt from 'bcrypt';
 import { EntityManager } from 'typeorm';
+import { Role } from 'src/common/interfaces';
 
 export async function seedDatabase(manager: EntityManager) {
   const userRepository = manager.getRepository(User);
@@ -19,8 +20,8 @@ export async function seedDatabase(manager: EntityManager) {
       userRepository.create({
         username: 'alice',
         email: 'alice@example.com',
-        password_hash: passwordHash,
-        roles: ['Admin'],
+        passwordHash: passwordHash,
+        roles: [Role.ADMIN],
       }),
     );
 
@@ -28,8 +29,8 @@ export async function seedDatabase(manager: EntityManager) {
       userRepository.create({
         username: 'bob',
         email: 'bob@example.com',
-        password_hash: passwordHash,
-        roles: ['Developer'],
+        passwordHash: passwordHash,
+        roles: [Role.USER],
       }),
     );
 
@@ -72,24 +73,24 @@ export async function seedDatabase(manager: EntityManager) {
     // Create Versions
     await versionRepository.save([
       versionRepository.create({
-        version_number: '1.0.0',
-        release_date: new Date('2023-09-01'),
+        versionNumber: '1.0.0',
+        releaseDate: new Date('2023-09-01'),
         changelog: 'Initial release.',
-        documentation_url: 'https://docs.example.com/stockapi/v1',
+        documentationUrl: 'https://docs.example.com/stockapi/v1',
         service: service1,
       }),
       versionRepository.create({
-        version_number: '1.1.0',
-        release_date: new Date('2023-10-01'),
+        versionNumber: '1.1.0',
+        releaseDate: new Date('2023-10-01'),
         changelog: 'Added new endpoints.',
-        documentation_url: 'https://docs.example.com/stockapi/v1.1',
+        documentationUrl: 'https://docs.example.com/stockapi/v1.1',
         service: service1,
       }),
       versionRepository.create({
-        version_number: '1.0.0',
-        release_date: new Date('2023-09-15'),
+        versionNumber: '1.0.0',
+        releaseDate: new Date('2023-09-15'),
         changelog: 'Initial release.',
-        documentation_url: 'https://docs.example.com/weatherapi/v1',
+        documentationUrl: 'https://docs.example.com/weatherapi/v1',
         service: service2,
       }),
     ]);

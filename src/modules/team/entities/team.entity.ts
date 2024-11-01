@@ -2,16 +2,15 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  CreateDateColumn,
-  UpdateDateColumn,
   ManyToMany,
   OneToMany,
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { ServiceGroup } from '../../service-group/entities/service-group.entity';
+import { AuditableEntity } from '../../../common/entities';
 
 @Entity()
-export class Team {
+export class Team extends AuditableEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -20,12 +19,6 @@ export class Team {
 
   @Column({ type: 'text', nullable: true })
   description: string;
-
-  @CreateDateColumn()
-  created_at: Date;
-
-  @UpdateDateColumn()
-  updated_at: Date;
 
   @ManyToMany(() => User, (user) => user.teams)
   users: User[];

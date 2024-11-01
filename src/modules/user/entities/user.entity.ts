@@ -2,15 +2,15 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  CreateDateColumn,
-  UpdateDateColumn,
   ManyToMany,
   JoinTable,
 } from 'typeorm';
 import { Team } from '../../team/entities/team.entity';
+import { AuditableEntity } from '../../../common/entities';
+import { Role } from '../../../common/interfaces';
 
 @Entity('users')
-export class User {
+export class User extends AuditableEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -21,16 +21,10 @@ export class User {
   email: string;
 
   @Column()
-  password_hash: string;
+  passwordHash: string;
 
   @Column('simple-array')
-  roles: string[];
-
-  @CreateDateColumn()
-  created_at: Date;
-
-  @UpdateDateColumn()
-  updated_at: Date;
+  roles: Role[];
 
   @ManyToMany(() => Team, (team) => team.users)
   @JoinTable({
