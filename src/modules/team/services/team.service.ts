@@ -1,13 +1,14 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { CreateTeamDto } from '../dto/create-team.dto';
-import { UpdateTeamDto } from '../dto/update-team.dto';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Team } from '../entities/team.entity';
+import { CreateTeamDto } from '../dto/create-team.dto';
+import { UpdateTeamDto } from '../dto/update-team.dto';
 
 @Injectable()
 export class TeamService {
   constructor(
-    @Inject('TEAM_REPOSITORY')
+    @InjectRepository(Team)
     private teamRepository: Repository<Team>,
   ) {}
 

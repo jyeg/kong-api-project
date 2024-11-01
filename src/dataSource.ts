@@ -1,27 +1,25 @@
-import { DataSource } from 'typeorm';
+import { DataSource, DataSourceOptions } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
-import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { config } from 'dotenv';
+import { join } from 'path';
 
-config();
+config(); // Load .env file
 
-export const dataSourceOptions: TypeOrmModuleOptions = {
+const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',
-  host: process.env.DATABASE_HOST,
-  port: parseInt(process.env.DATABASE_PORT),
-  username: process.env.DATABASE_USERNAME,
-  password: process.env.DATABASE_PASSWORD,
-  database: process.env.DATABASE_NAME,
-  migrations: ['./src/database/migrations/*{.ts,.js}'],
-  entities: ['./src/**/*.entity{.ts,.js}'],
-  synchronize: process.env.NODE_ENV !== 'production' ? true : false,
+  host: process.env.DATABASE_HOST || 'localhost',
+  port: parseInt(process.env.DATABASE_PORT) || 5432,
+  username: process.env.DATABASE_USERNAME || 'postgres',
+  password: process.env.DATABASE_PASSWORD || 'postgres',
+  database: process.env.DATABASE_NAME || 'postgres',
+  entities: [join(__dirname, '**', '*.entity.{ts,js}')],
+  migrations: [join(__dirname, 'database', 'migrations', '*{.ts,.js}')],
+  synchronize: process.env.NODE_ENV !== 'production',
   namingStrategy: new SnakeNamingStrategy(),
-  autoLoadEntities: true,
+  logging: process.env.NODE_ENV !== 'production',
 };
 
-const dataSource = new DataSource({
-  ...dataSourceOptions,
-  type: 'postgres',
-});
+const dataSource = new DataSource(dataSourceOptions);
 
 export default dataSource;
+export { dataSourceOptions };
