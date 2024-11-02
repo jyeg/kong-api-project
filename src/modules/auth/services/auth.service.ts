@@ -6,13 +6,16 @@ import * as bcrypt from 'bcrypt';
 import { User } from '../../user/entities/user.entity';
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
-import { Role } from 'src/common/interfaces/roles';
+import { Team } from '../../team/entities/team.entity';
+import { Role } from '../../../common/interfaces';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    @InjectRepository(Team)
+    private teamsRepository: Repository<Team>,
     private jwtService: JwtService,
   ) {}
 
@@ -54,6 +57,14 @@ export class AuthService {
       passwordHash: hashedPassword,
       roles: [Role.USER],
     });
+
+    const team = await this.teamsRepository.findOne({
+      where: { id: registerDto.teamId },
+    });
+
+    if (team) {
+      user.team = team;
+    }
 
     const savedUser = await this.usersRepository.save(user);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

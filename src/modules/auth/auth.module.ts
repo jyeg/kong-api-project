@@ -7,10 +7,11 @@ import { AuthController } from './controllers/auth.controller';
 import { JwtStrategy } from '../../common/strategies/jwt.strategy';
 import { User } from '../user/entities/user.entity';
 import { jwtConstants } from '../../common/constants/';
+import { Team } from '../team/entities/team.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, Team]),
     PassportModule,
     JwtModule.register({
       secret: jwtConstants.secret,

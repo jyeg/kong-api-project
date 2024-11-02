@@ -2,12 +2,13 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  ManyToMany,
-  JoinTable,
+  ManyToOne,
+  OneToMany,
 } from 'typeorm';
 import { Team } from '../../team/entities/team.entity';
 import { AuditableEntity } from '../../../common/entities';
 import { Role } from '../../../common/interfaces';
+import { ServiceGroup } from '../../service-group/entities/service-group.entity';
 
 @Entity('users')
 export class User extends AuditableEntity {
@@ -26,11 +27,12 @@ export class User extends AuditableEntity {
   @Column('simple-array')
   roles: Role[];
 
-  @ManyToMany(() => Team, (team) => team.users)
-  @JoinTable({
-    name: 'user_teams',
-    joinColumn: { name: 'user_id', referencedColumnName: 'id' },
-    inverseJoinColumn: { name: 'team_id', referencedColumnName: 'id' },
-  })
-  teams: Team[];
+  @ManyToOne(() => Team, (team) => team.users, { nullable: true })
+  team: Team;
+
+  @Column('uuid')
+  teamId: string;
+
+  @OneToMany(() => ServiceGroup, (service) => service.user)
+  services: ServiceGroup[];
 }

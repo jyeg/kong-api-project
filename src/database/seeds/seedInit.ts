@@ -16,97 +16,125 @@ export async function seedDatabase(manager: EntityManager) {
     // Create Users
     const passwordHash = await bcrypt.hash('password123', 10);
 
-    const user1 = await userRepository.save(
+    // Create Teams
+    const teams = await teamRepository.save([
+      teamRepository.create({
+        name: 'Team Alpha',
+        description: 'Alpha team description',
+      }),
+      teamRepository.create({
+        name: 'Team Beta',
+        description: 'Beta team description',
+      }),
+    ]);
+
+    const users = await userRepository.save([
       userRepository.create({
         username: 'alice',
         email: 'alice@example.com',
         passwordHash: passwordHash,
         roles: [Role.ADMIN],
+        teamId: teams[0].id,
       }),
-    );
-
-    const user2 = await userRepository.save(
       userRepository.create({
         username: 'bob',
         email: 'bob@example.com',
         passwordHash: passwordHash,
         roles: [Role.USER],
+        teamId: teams[0].id,
       }),
-    );
-
-    // Create Teams
-    const team1 = await teamRepository.save(
-      teamRepository.create({
-        name: 'Team Alpha',
-        description: 'Alpha team description',
-      }),
-    );
-
-    const team2 = await teamRepository.save(
-      teamRepository.create({
-        name: 'Team Beta',
-        description: 'Beta team description',
-      }),
-    );
-
-    // Create ServiceGroups
-    const service1 = await serviceRepository.save(
-      serviceRepository.create({
-        name: 'StockApi',
-        description: 'Provides stock information.',
-        team: team1,
-        tags: ['finance', 'stocks'],
-        status: 'Active',
-      }),
-    );
-
-    const service2 = await serviceRepository.save(
-      serviceRepository.create({
-        name: 'WeatherApi',
-        description: 'Provides weather data.',
-        team: team2,
-        tags: ['weather', 'data'],
-        status: 'Active',
-      }),
-    );
-
-    // Create Versions
-    await versionRepository.save([
-      versionRepository.create({
-        versionNumber: '1.0.0',
-        releaseDate: new Date('2023-09-01'),
-        changelog: 'Initial release.',
-        documentationUrl: 'https://docs.example.com/stockapi/v1',
-        service: service1,
-      }),
-      versionRepository.create({
-        versionNumber: '1.1.0',
-        releaseDate: new Date('2023-10-01'),
-        changelog: 'Added new endpoints.',
-        documentationUrl: 'https://docs.example.com/stockapi/v1.1',
-        service: service1,
-      }),
-      versionRepository.create({
-        versionNumber: '1.0.0',
-        releaseDate: new Date('2023-09-15'),
-        changelog: 'Initial release.',
-        documentationUrl: 'https://docs.example.com/weatherapi/v1',
-        service: service2,
+      userRepository.create({
+        username: 'charlie',
+        email: 'charlie@example.com',
+        passwordHash: passwordHash,
+        roles: [Role.USER],
+        teamId: teams[1].id,
       }),
     ]);
 
-    // Update team-user relationships separately
-    await teamRepository
-      .createQueryBuilder()
-      .relation(Team, 'users')
-      .of(team1)
-      .add([user1.id, user2.id]);
+    const animalNames = [
+      'Lion',
+      'Elephant',
+      'Giraffe',
+      'Zebra',
+      'Monkey',
+      'Kangaroo',
+      'Penguin',
+      'Koala',
+      'Crocodile',
+      'Tiger',
+    ];
+    const animalDescriptions = [
+      'The king of the jungle',
+      'The largest land animal',
+      'The tallest mammal',
+      'The black and white striped horse',
+      'The mischievous primate',
+      'The hopping marsupial',
+      'The flightless bird',
+      'The cuddly marsupial',
+      'The ancient predator',
+      'The majestic predator',
+    ];
+    const animalTags = [
+      'Savannah',
+      'Forest',
+      'Grassland',
+      'Desert',
+      'Mountain',
+      'River',
+      'Ocean',
+      'Island',
+      'Swamp',
+      'Tundra',
+    ];
 
-    await teamRepository
-      .createQueryBuilder()
-      .relation(Team, 'users')
-      .of(team2)
-      .add(user2.id);
+    // Create ServiceGroups
+    const serviceGroups = [];
+    for (let i = 0; i < 10; i++) {
+      const serviceGroup = serviceRepository.create({
+        name: `ServiceGroup ${animalNames[i]}`,
+        description: animalDescriptions[i],
+        userId: i > 7 ? users[2].id : users[i % 2].id, // Alternate between Alice and Bob
+        tags: [animalTags[i]], // Use a single tag for each service group
+      });
+      serviceGroups.push(serviceGroup);
+    }
+    await serviceRepository.save(serviceGroups);
+
+    // Create Versions for each ServiceGroup
+    const versions = [];
+    for (const serviceGroup of serviceGroups) {
+      versions.push(
+        versionRepository.create({
+          version: 1,
+          releaseDate: new Date('2023-09-01'),
+          changelog: JSON.stringify({
+            name: serviceGroup.name + ' v1',
+            description: serviceGroup.description,
+            tags: serviceGroup.tags,
+            userId: serviceGroup.userId,
+          }),
+          documentationUrl: `https://docs.example.com/servicegroup${serviceGroup.name}/v1`,
+          service: serviceGroup,
+          isActive: false,
+        }),
+        versionRepository.create({
+          version: 2,
+          releaseDate: new Date('2023-10-01'),
+          changelog: JSON.stringify({
+            name: serviceGroup.name,
+            description: serviceGroup.description,
+            tags: serviceGroup.tags,
+            userId: serviceGroup.userId,
+          }),
+          documentationUrl: `https://docs.example.com/servicegroup${serviceGroup.name}/v1.1`,
+          service: serviceGroup,
+          isActive: true,
+        }),
+      );
+    }
+    await versionRepository.save(versions);
 
     console.log('Database seeding completed.');
   } catch (error) {

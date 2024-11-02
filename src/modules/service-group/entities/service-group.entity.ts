@@ -5,7 +5,7 @@ import {
   ManyToOne,
   OneToMany,
 } from 'typeorm';
-import { Team } from '../../team/entities/team.entity';
+import { User } from '../../user/entities/user.entity';
 import { Version } from '../../version/entities/version.entity';
 import { AuditableEntity } from '../../../common/entities';
 
@@ -20,22 +20,17 @@ export class ServiceGroup extends AuditableEntity {
   @Column({ type: 'text', nullable: true })
   description: string;
 
-  @ManyToOne(() => Team, (team) => team.services, { onDelete: 'SET NULL' })
-  team: Team;
+  @Column('uuid')
+  userId: string;
+
+  @ManyToOne(() => User, (user) => user.services, { onDelete: 'SET NULL' })
+  user: User;
 
   @Column('simple-array', { nullable: true })
   tags: string[];
 
-  // @Column({
-  //   type: 'tsvector',
-  //   nullable: true,
-
-  // })
-  // fullTextSearch: string;
-
-  @Column({ length: 50, nullable: true })
-  status: string;
-
-  @OneToMany(() => Version, (version) => version.service)
+  @OneToMany(() => Version, (version) => version.service, {
+    cascade: ['insert', 'update', 'soft-remove'],
+  })
   versions: Version[];
 }

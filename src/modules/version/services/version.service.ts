@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { CreateVersionDto } from '../dto/create-version.dto';
 import { UpdateVersionDto } from '../dto/update-version.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DeleteResult, Repository } from 'typeorm';
 import { Version } from '../entities/version.entity';
 
 @Injectable()
@@ -12,23 +12,30 @@ export class VersionService {
     private versionRepository: Repository<Version>,
   ) {}
 
-  create(createVersionDto: CreateVersionDto) {
+  async create(createVersionDto: CreateVersionDto): Promise<Version> {
     return this.versionRepository.save(createVersionDto);
   }
 
-  findAll() {
+  async findAll(): Promise<Version[]> {
     return this.versionRepository.find();
   }
 
-  findOne(id: string) {
-    return this.versionRepository.findOneBy({ id });
+  async findOne(id: string): Promise<Version> {
+    return this.versionRepository.findOneByOrFail({ id });
   }
 
-  update(id: string, updateVersionDto: UpdateVersionDto) {
-    return this.versionRepository.update(id, updateVersionDto);
+  async update(
+    id: string,
+    updateVersionDto: UpdateVersionDto,
+  ): Promise<Version> {
+    const existingVersion = await this.versionRepository.findOneByOrFail({
+      id,
+    });
+    const updatedVersion = Object.assign(existingVersion, updateVersionDto);
+    return this.versionRepository.save(updatedVersion);
   }
 
-  remove(id: string) {
+  async remove(id: string): Promise<DeleteResult> {
     return this.versionRepository.delete(id);
   }
 }

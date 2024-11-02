@@ -1,34 +1,44 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { EntityManager } from 'typeorm';
 import { Team } from '../entities/team.entity';
 import { CreateTeamDto } from '../dto/create-team.dto';
 import { UpdateTeamDto } from '../dto/update-team.dto';
+import { InjectEntityManager } from '@nestjs/typeorm';
 
 @Injectable()
 export class TeamService {
   constructor(
-    @InjectRepository(Team)
-    private teamRepository: Repository<Team>,
+    @InjectEntityManager() private readonly manager: EntityManager, // Inject EntityManager
   ) {}
 
-  create(createTeamDto: CreateTeamDto) {
-    return this.teamRepository.save(createTeamDto);
+  async create(createTeamDto: CreateTeamDto) {
+    const team = this.manager.create(Team, createTeamDto);
+    return this.manager.save(team);
   }
 
-  findAll() {
-    return this.teamRepository.find();
+  async findAll() {
+    return this.manager.find(Team);
   }
 
-  findOne(id: string) {
-    return this.teamRepository.findOneBy({ id });
+  async findOne(id: string) {
+    const team = await this.manager.findOne(Team, { where: { id } });
+    if (!team) {
+      throw new NotFoundException(`Team with ID ${id} not found`);
+    }
+    return team;
   }
 
-  update(id: string, updateTeamDto: UpdateTeamDto) {
-    return this.teamRepository.update(id, updateTeamDto);
+  async update(id: string, updateTeamDto: UpdateTeamDto) {
+    const team = await this.findOne(id); // Check if the team exists
+    const updatedTeam = Object.assign(team, updateTeamDto);
+    return this.manager.save(updatedTeam);
   }
 
-  remove(id: string) {
-    return this.teamRepository.delete(id);
+  async remove(id: string) {
+    const result = await this.manager.delete(Team, id);
+    if (result.affected === 0) {
+      throw new NotFoundException(`Team with ID ${id} not found`);
+    }
+    return { deleted: true };
   }
 }

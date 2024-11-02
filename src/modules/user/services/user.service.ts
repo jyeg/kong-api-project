@@ -1,34 +1,45 @@
-import { Injectable } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { EntityManager } from 'typeorm';
+import { User } from '../entities/user.entity';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
-import { User } from '../entities/user.entity';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectEntityManager } from '@nestjs/typeorm';
 
 @Injectable()
 export class UserService {
-  constructor(
-    @InjectRepository(User)
-    private userRepository: Repository<User>,
-  ) {}
+  constructor(@InjectEntityManager() private readonly manager: EntityManager) {}
 
-  create(createUserDto: CreateUserDto) {
-    return this.userRepository.save(createUserDto);
+  async create(createUserDto: CreateUserDto): Promise<User> {
+    const user = this.manager.create(User, createUserDto);
+    return this.manager.save(user);
   }
 
-  findAll() {
-    return this.userRepository.find();
+  async findAll(): Promise<User[]> {
+    return this.manager.find(User);
   }
 
-  findOne(id: string) {
-    return this.userRepository.findOneBy({ id });
+  async findOne(id: string): Promise<User> {
+    const user = await this.manager.findOne(User, { where: { id } });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+    return user;
   }
 
-  update(id: string, updateUserDto: UpdateUserDto) {
-    return this.userRepository.update(id, updateUserDto);
+  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+    const user = await this.findOne(id); // Check if the user exists
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+    const updatedUser = Object.assign(user, updateUserDto);
+    return this.manager.save(updatedUser);
   }
 
-  remove(id: string) {
-    return this.userRepository.delete(id);
+  async remove(id: string): Promise<{ deleted: boolean }> {
+    const result = await this.manager.delete(User, id);
+    if (result.affected === 0) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+    return { deleted: true };
   }
 }

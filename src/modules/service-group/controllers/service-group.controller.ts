@@ -7,12 +7,15 @@ import {
   Param,
   Delete,
   UseGuards,
+  Query,
+  Request,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, ApiResponse } from '@nestjs/swagger';
 import { ServiceGroupService } from '../services/service-group.service';
 import { CreateServiceGroupDto } from '../dto/create-service-group.dto';
 import { UpdateServiceGroupDto } from '../dto/update-service-group.dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
+import { FindServiceGroupsDto } from '../dto/find-service-groups.dto';
 
 @ApiTags('service-group')
 @ApiBearerAuth('access-token')
@@ -22,33 +25,56 @@ export class ServiceGroupController {
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  create(@Body() createServiceGroupDto: CreateServiceGroupDto) {
-    return this.serviceGroupService.create(createServiceGroupDto);
+  @ApiResponse({
+    status: 201,
+    description: 'Service group created successfully.',
+  })
+  @ApiResponse({ status: 400, description: 'Bad request.' })
+  create(@Body() createServiceGroupDto: CreateServiceGroupDto, @Request() req) {
+    const user = req.user; // Get the logged-in user from the request
+    return this.serviceGroupService.create(createServiceGroupDto, user);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get()
-  findAll() {
-    return this.serviceGroupService.findAll();
+  findAll(@Query() query: FindServiceGroupsDto) {
+    return this.serviceGroupService.findAll(query);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get(':id')
+  @ApiResponse({
+    status: 200,
+    description: 'Service group retrieved successfully.',
+  })
+  @ApiResponse({ status: 404, description: 'Service group not found.' })
   findOne(@Param('id') id: string) {
     return this.serviceGroupService.findOne(id);
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
+  @ApiResponse({
+    status: 200,
+    description: 'Service group updated successfully.',
+  })
+  @ApiResponse({ status: 404, description: 'Service group not found.' })
   update(
     @Param('id') id: string,
     @Body() updateServiceGroupDto: UpdateServiceGroupDto,
+    @Request() req,
   ) {
-    return this.serviceGroupService.update(id, updateServiceGroupDto);
+    const user = req.user;
+    return this.serviceGroupService.update(id, updateServiceGroupDto, user);
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
+  @ApiResponse({
+    status: 200,
+    description: 'Service group deleted successfully.',
+  })
+  @ApiResponse({ status: 404, description: 'Service group not found.' })
   remove(@Param('id') id: string) {
     return this.serviceGroupService.remove(id);
   }

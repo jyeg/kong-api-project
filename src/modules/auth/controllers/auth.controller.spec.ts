@@ -4,11 +4,22 @@ import { AuthService } from '../services/auth.service';
 
 describe('AuthController', () => {
   let controller: AuthController;
+  let mockAuthService;
 
   beforeEach(async () => {
+    mockAuthService = {
+      login: jest.fn(),
+      register: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
-      providers: [AuthService],
+      providers: [
+        {
+          provide: AuthService,
+          useValue: mockAuthService,
+        },
+      ],
     }).compile();
 
     controller = module.get<AuthController>(AuthController);
@@ -17,4 +28,6 @@ describe('AuthController', () => {
   it('should be defined', () => {
     expect(controller).toBeDefined();
   });
+
+  // Add additional tests for AuthController methods here
 });

@@ -2,7 +2,7 @@ import { Controller, Post, Body } from '@nestjs/common';
 import { AuthService } from '../services/auth.service';
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -13,6 +13,18 @@ export class AuthController {
   @ApiOperation({ summary: 'User login' })
   @ApiResponse({ status: 200, description: 'Login successful' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiBody({
+    description: 'User login credentials',
+    type: LoginDto,
+    examples: {
+      default: {
+        value: {
+          email: 'bob@example.com',
+          password: 'password123',
+        },
+      },
+    },
+  })
   async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
   }
