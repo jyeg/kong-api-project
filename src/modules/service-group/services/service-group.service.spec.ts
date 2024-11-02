@@ -6,6 +6,7 @@ import { Team } from '../../team/entities/team.entity';
 import { EntityManager } from 'typeorm';
 import { NotFoundException } from '@nestjs/common';
 import { FindServiceGroupsDto } from '../dto/find-service-groups.dto';
+import { User } from 'src/modules/user/entities/user.entity';
 
 describe('ServiceGroupService', () => {
   let service: ServiceGroupService;
@@ -34,16 +35,19 @@ describe('ServiceGroupService', () => {
     };
 
     mockEntityManager = {
-      getRepository: jest.fn().mockImplementation((entity) => {
-        if (entity === ServiceGroup) {
-          return mockServiceGroupRepository;
-        }
-        if (entity === Team) {
-          return mockTeamRepository;
-        }
-      }),
+      transaction: jest.fn((callback) => callback(mockEntityManager)),
+      create: jest.fn(),
+      save: jest.fn(),
       findOne: jest.fn(),
-      createQueryBuilder: jest.fn(),
+      delete: jest.fn(),
+      merge: jest.fn(),
+      createQueryBuilder: jest.fn().mockReturnValue({
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn(),
+      }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -72,70 +76,74 @@ describe('ServiceGroupService', () => {
   });
 
   describe('create', () => {
-    it('should create a service group', async () => {
+    it('should create a service group with initial version', async () => {
       const createServiceGroupDto = {
         name: 'Test Service',
         description: 'Test Description',
         tags: ['test'],
+        userId: 'user-1',
       };
-      const team = { id: 'team-id' };
 
-      mockTeamRepository.findOne.mockResolvedValue(team);
-      mockServiceGroupRepository.save.mockResolvedValue({
+      const savedServiceGroup = {
+        id: 'sg-1',
         ...createServiceGroupDto,
-        team,
-      });
-
-      const result = await service.create(createServiceGroupDto, { team });
-
-      expect(result).toEqual({ ...createServiceGroupDto, team });
-      expect(mockServiceGroupRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({ team }),
-      );
-    });
-
-    it('should throw NotFoundException if team not found', async () => {
-      const createServiceGroupDto = {
-        name: 'Test Service',
-        description: 'Test Description',
-        tags: ['test'],
       };
 
-      mockTeamRepository.findOne.mockResolvedValue(null);
+      mockEntityManager.create
+        .mockReturnValueOnce(savedServiceGroup) // ServiceGroup
+        .mockReturnValueOnce({
+          // Version
+          serviceGroupId: savedServiceGroup.id,
+          version: 1,
+          isActive: true,
+          changelog: {
+            name: savedServiceGroup.name,
+            description: savedServiceGroup.description,
+            tags: savedServiceGroup.tags,
+            userId: createServiceGroupDto.userId,
+          },
+        });
 
-      await expect(
-        service.create(createServiceGroupDto, { team: { id: 'team-id' } }),
-      ).rejects.toThrow(NotFoundException);
+      mockEntityManager.save.mockResolvedValueOnce(savedServiceGroup);
+
+      const result = await service.create(createServiceGroupDto);
+
+      expect(result).toEqual(savedServiceGroup);
+      expect(mockEntityManager.transaction).toHaveBeenCalled();
+      expect(mockEntityManager.save).toHaveBeenCalledTimes(2); // Once for ServiceGroup, once for Version
     });
   });
 
   describe('findAll', () => {
-    it('should return an array of service groups', async () => {
+    it('should filter by team ID when user has teamId', async () => {
       const query: FindServiceGroupsDto = {
-        search: '',
-        sort: 'asc',
+        search: 'test',
+        sort: 1,
         page: 1,
         limit: 10,
       };
-      const serviceGroups = [
-        { id: '1', name: 'Service 1' },
-        { id: '2', name: 'Service 2' },
-      ];
-      mockServiceGroupRepository
+      const user = { teamId: 'team-1' };
+
+      const serviceGroups = [{ id: '1', name: 'Service 1' }];
+      mockEntityManager
         .createQueryBuilder()
-        .getManyAndCount.mockResolvedValue([serviceGroups, 2]);
+        .getManyAndCount.mockResolvedValue([serviceGroups, 1]);
 
-      const result = await service.findAll(query);
+      await service.findAll(query, user as User);
 
-      expect(result).toEqual([serviceGroups, 2]);
-      expect(mockServiceGroupRepository.createQueryBuilder).toHaveBeenCalled();
+      expect(
+        mockEntityManager.createQueryBuilder().andWhere,
+      ).toHaveBeenCalledWith(
+        'serviceGroup.userId IN (SELECT id FROM users WHERE team_id = :teamId)',
+        { teamId: user.teamId },
+      );
     });
   });
 
   describe('findOne', () => {
     it('should return a service group', async () => {
       const serviceGroup = { id: '1', name: 'Service 1' };
-      mockServiceGroupRepository.findOne.mockResolvedValue(serviceGroup);
+      mockEntityManager.findOne.mockResolvedValue(serviceGroup);
 
       const result = await service.findOne('1');
 
@@ -143,29 +151,62 @@ describe('ServiceGroupService', () => {
     });
 
     it('should throw NotFoundException if service group not found', async () => {
-      mockServiceGroupRepository.findOne.mockResolvedValue(null);
+      mockEntityManager.findOne.mockResolvedValue(null);
 
       await expect(service.findOne('1')).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('update', () => {
-    it('should update a service group', async () => {
-      const serviceGroup = { id: '1', name: 'Service 1' };
-      const updateServiceGroupDto = { name: 'Updated Service' };
-      mockServiceGroupRepository.findOne.mockResolvedValue(serviceGroup);
-      mockServiceGroupRepository.save.mockResolvedValue({
-        ...serviceGroup,
-        ...updateServiceGroupDto,
-      });
+    it('should update service group and create new version', async () => {
+      const id = 'sg-1';
+      const updateServiceGroupDto = {
+        name: 'Updated Service',
+        userId: 'user-1',
+      };
 
-      const result = await service.update('1', updateServiceGroupDto);
+      const existingServiceGroup = {
+        id,
+        name: 'Original Service',
+        versions: [
+          {
+            version: 1,
+            isActive: true,
+          },
+        ],
+      };
 
-      expect(result).toEqual({ ...serviceGroup, ...updateServiceGroupDto });
+      mockEntityManager.findOne.mockResolvedValueOnce(existingServiceGroup);
+
+      const updatedServiceGroup = {
+        ...existingServiceGroup,
+        name: updateServiceGroupDto.name,
+        versions: [
+          { version: 1, isActive: false },
+          { version: 2, isActive: true },
+        ],
+      };
+
+      mockEntityManager.merge.mockReturnValue(updatedServiceGroup);
+      mockEntityManager.save.mockResolvedValue(updatedServiceGroup);
+
+      const result = await service.update(id, updateServiceGroupDto);
+
+      expect(result).toEqual(updatedServiceGroup);
+      expect(mockEntityManager.transaction).toHaveBeenCalled();
+      expect(mockEntityManager.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: updateServiceGroupDto.name,
+          versions: expect.arrayContaining([
+            expect.objectContaining({ isActive: false }),
+            expect.objectContaining({ isActive: true }),
+          ]),
+        }),
+      );
     });
 
     it('should throw NotFoundException if service group not found', async () => {
-      mockServiceGroupRepository.findOne.mockResolvedValue(null);
+      mockEntityManager.findOne.mockResolvedValue(null);
 
       await expect(service.update('1', {})).rejects.toThrow(NotFoundException);
     });
@@ -173,7 +214,7 @@ describe('ServiceGroupService', () => {
 
   describe('remove', () => {
     it('should remove a service group', async () => {
-      mockServiceGroupRepository.delete.mockResolvedValue({ affected: 1 });
+      mockEntityManager.delete.mockResolvedValue({ affected: 1 });
 
       const result = await service.remove('1');
 
@@ -181,7 +222,7 @@ describe('ServiceGroupService', () => {
     });
 
     it('should throw NotFoundException if service group not found', async () => {
-      mockServiceGroupRepository.delete.mockResolvedValue({ affected: 0 });
+      mockEntityManager.delete.mockResolvedValue({ affected: 0 });
 
       await expect(service.remove('1')).rejects.toThrow(NotFoundException);
     });
