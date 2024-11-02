@@ -15,4 +15,6 @@ export class CreateServiceGroupDto {
   @IsOptional()
   @IsArray()
   tags?: string[];
+
+  userId: string;
 }

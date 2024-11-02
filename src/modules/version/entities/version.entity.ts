@@ -9,7 +9,7 @@ import { ServiceGroup } from '../../service-group/entities/service-group.entity'
 import { AuditableEntity } from '../../../common/entities';
 
 @Entity('versions')
-@Index('IDX_UNIQUE_ACTIVE_VERSION', ['service', 'isActive'], {
+@Index('IDX_UNIQUE_ACTIVE_VERSION', ['serviceGroupId', 'isActive'], {
   unique: true,
   where: 'is_active = true',
 })
@@ -20,10 +20,10 @@ export class Version extends AuditableEntity {
   @ManyToOne(() => ServiceGroup, (service) => service.versions, {
     onDelete: 'CASCADE',
   })
-  service: ServiceGroup;
+  serviceGroup: ServiceGroup;
 
   @Column('uuid')
-  serviceId: string;
+  serviceGroupId: string;
 
   @Column({ type: 'integer' })
   version: number;

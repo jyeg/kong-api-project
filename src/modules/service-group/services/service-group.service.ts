@@ -5,36 +5,32 @@ import { EntityManager } from 'typeorm';
 import { ServiceGroup } from '../entities/service-group.entity';
 import { FindServiceGroupsDto } from '../dto/find-service-groups.dto';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { Version } from '../../version/entities/version.entity';
+import { User } from 'src/modules/user/entities/user.entity';
 @Injectable()
 export class ServiceGroupService {
   constructor(@InjectEntityManager() private readonly manager: EntityManager) {}
 
   async create(
     createServiceGroupDto: CreateServiceGroupDto,
-    user: any,
     entityManager = this.manager,
   ): Promise<ServiceGroup> {
-    const teamId = user.team.id;
-
     return entityManager.transaction(async (transactionalEntityManager) => {
       const serviceGroup = transactionalEntityManager.create(ServiceGroup, {
         ...createServiceGroupDto,
-        teamId,
       });
 
       const savedServiceGroup =
         await transactionalEntityManager.save(serviceGroup);
 
-      const version = transactionalEntityManager.create(Version, {
-        serviceId: savedServiceGroup.id,
-        versionNumber: 1,
+      const version = transactionalEntityManager.create('Version', {
+        serviceGroupId: savedServiceGroup.id,
+        version: 1,
         isActive: true,
         changelog: {
           name: savedServiceGroup.name,
           description: savedServiceGroup.description,
           tags: savedServiceGroup.tags,
-          userId: user.id,
+          userId: createServiceGroupDto.userId,
         },
       });
 
@@ -46,15 +42,24 @@ export class ServiceGroupService {
 
   async findAll(
     query: FindServiceGroupsDto,
+    user: User,
     entityManager = this.manager,
   ): Promise<[ServiceGroup[], number]> {
     const { search, sort, page, limit } = query;
 
     const qb = entityManager.createQueryBuilder(ServiceGroup, 'serviceGroup');
 
+    // If the user is part of a team, you can also filter by team ID if needed
+    if (user.teamId) {
+      qb.andWhere(
+        'serviceGroup.userId IN (SELECT id FROM users WHERE team_id = :teamId)',
+        { teamId: user.teamId },
+      );
+    }
+
     // Fuzzy search by name, description, and tags
     if (search) {
-      qb.where(
+      qb.andWhere(
         '(serviceGroup.name ILIKE :search OR serviceGroup.description ILIKE :search OR serviceGroup.tags ILIKE :search)',
         { search: `%${search}%` },
       );
@@ -88,7 +93,6 @@ export class ServiceGroupService {
   async update(
     id: string,
     updateServiceGroupDto: UpdateServiceGroupDto,
-    user: any,
     entityManager = this.manager,
   ): Promise<ServiceGroup> {
     return entityManager.transaction(async (transactionalEntityManager) => {
@@ -97,14 +101,14 @@ export class ServiceGroupService {
 
       // mark existing most recent active version to false
       const mostRecentVersion = serviceGroup.versions.sort(
-        (a, b) => a.versionNumber - b.versionNumber,
+        (a, b) => a.version - b.version,
       )[0];
       mostRecentVersion.isActive = false;
-
       // create a new version with content from update in changelog
-      const newVersion = transactionalEntityManager.create(Version, {
-        serviceId: serviceGroup.id,
-        versionNumber: mostRecentVersion.versionNumber + 1,
+      const newVersion = transactionalEntityManager.create('Version', {
+        serviceGroupId: serviceGroup.id,
+        version: mostRecentVersion.version + 1,
+        isActive: true,
         changelog: {
           name: updateServiceGroupDto.name
             ? updateServiceGroupDto.name
@@ -115,7 +119,7 @@ export class ServiceGroupService {
           tags: updateServiceGroupDto.tags
             ? updateServiceGroupDto.tags
             : serviceGroup.tags,
-          userId: user.id,
+          userId: updateServiceGroupDto.userId,
         },
       });
 

@@ -107,6 +107,7 @@ export async function seedDatabase(manager: EntityManager) {
     for (const serviceGroup of serviceGroups) {
       versions.push(
         versionRepository.create({
+          serviceGroupId: serviceGroup.id,
           version: 1,
           releaseDate: new Date('2023-09-01'),
           changelog: JSON.stringify({
@@ -116,7 +117,6 @@ export async function seedDatabase(manager: EntityManager) {
             userId: serviceGroup.userId,
           }),
           documentationUrl: `https://docs.example.com/servicegroup${serviceGroup.name}/v1`,
-          service: serviceGroup,
           isActive: false,
         }),
         versionRepository.create({
@@ -129,7 +129,6 @@ export async function seedDatabase(manager: EntityManager) {
             userId: serviceGroup.userId,
           }),
           documentationUrl: `https://docs.example.com/servicegroup${serviceGroup.name}/v1.1`,
-          service: serviceGroup,
           isActive: true,
         }),
       );

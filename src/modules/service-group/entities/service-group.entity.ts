@@ -29,7 +29,7 @@ export class ServiceGroup extends AuditableEntity {
   @Column('simple-array', { nullable: true })
   tags: string[];
 
-  @OneToMany(() => Version, (version) => version.service, {
+  @OneToMany(() => Version, (version) => version.serviceGroup, {
     cascade: ['insert', 'update', 'soft-remove'],
   })
   versions: Version[];

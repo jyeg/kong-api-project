@@ -32,13 +32,17 @@ export class ServiceGroupController {
   @ApiResponse({ status: 400, description: 'Bad request.' })
   create(@Body() createServiceGroupDto: CreateServiceGroupDto, @Request() req) {
     const user = req.user; // Get the logged-in user from the request
-    return this.serviceGroupService.create(createServiceGroupDto, user);
+    return this.serviceGroupService.create({
+      ...createServiceGroupDto,
+      userId: user.id,
+    });
   }
 
   @UseGuards(JwtAuthGuard)
   @Get()
-  findAll(@Query() query: FindServiceGroupsDto) {
-    return this.serviceGroupService.findAll(query);
+  findAll(@Query() query: FindServiceGroupsDto, @Request() req) {
+    const user = req.user;
+    return this.serviceGroupService.findAll(query, user);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -65,7 +69,10 @@ export class ServiceGroupController {
     @Request() req,
   ) {
     const user = req.user;
-    return this.serviceGroupService.update(id, updateServiceGroupDto, user);
+    return this.serviceGroupService.update(id, {
+      ...updateServiceGroupDto,
+      userId: user.id,
+    });
   }
 
   @UseGuards(JwtAuthGuard)
