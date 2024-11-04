@@ -4,10 +4,14 @@ import { ServiceGroupService } from '../services/service-group.service';
 import { CreateServiceGroupDto } from '../dto/create-service-group.dto';
 import { UpdateServiceGroupDto } from '../dto/update-service-group.dto';
 import { FindServiceGroupsDto } from '../dto/find-service-groups.dto';
+import { SortDirection } from '../../../common/constants';
+import { UserService } from '../../user/services/user.service';
+import { HttpStatus } from '@nestjs/common';
 
 describe('ServiceGroupController', () => {
   let controller: ServiceGroupController;
   let service: ServiceGroupService;
+  let mockResponse: any;
 
   const mockServiceGroupService = {
     create: jest.fn(),
@@ -15,6 +19,10 @@ describe('ServiceGroupController', () => {
     findOne: jest.fn(),
     update: jest.fn(),
     remove: jest.fn(),
+  };
+
+  const mockUserService = {
+    findAll: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -25,11 +33,19 @@ describe('ServiceGroupController', () => {
           provide: ServiceGroupService,
           useValue: mockServiceGroupService,
         },
+        {
+          provide: UserService,
+          useValue: mockUserService,
+        },
       ],
     }).compile();
 
     controller = module.get<ServiceGroupController>(ServiceGroupController);
     service = module.get<ServiceGroupService>(ServiceGroupService);
+    mockResponse = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn().mockReturnThis(),
+    };
   });
 
   afterEach(() => {
@@ -58,9 +74,10 @@ describe('ServiceGroupController', () => {
 
       mockServiceGroupService.create.mockResolvedValue(expectedServiceGroup);
 
-      const result = await controller.create(createDto, mockRequest);
+      await controller.create(createDto, mockRequest, mockResponse);
 
-      expect(result).toEqual(expectedServiceGroup);
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CREATED);
+      expect(mockResponse.json).toHaveBeenCalledWith(expectedServiceGroup);
       expect(service.create).toHaveBeenCalledWith({
         ...createDto,
         userId: mockUser.id,
@@ -72,7 +89,7 @@ describe('ServiceGroupController', () => {
     it('should return all service groups with pagination and user context', async () => {
       const query: FindServiceGroupsDto = {
         search: 'test',
-        sort: 1,
+        sort: SortDirection.ASC,
         page: 1,
         limit: 10,
       };
@@ -80,20 +97,18 @@ describe('ServiceGroupController', () => {
       const mockRequest = { user: mockUser };
       const expectedResult = {
         items: [{ id: 'sg-1', name: 'Test Service' }],
-        meta: {
-          totalItems: 1,
-          itemCount: 1,
-          itemsPerPage: 10,
-          totalPages: 1,
-          currentPage: 1,
-        },
+        total: 1,
       };
 
-      mockServiceGroupService.findAll.mockResolvedValue(expectedResult);
+      mockServiceGroupService.findAll.mockResolvedValue([
+        expectedResult.items,
+        expectedResult.total,
+      ]);
 
-      const result = await controller.findAll(query, mockRequest);
+      await controller.findAll(query, mockRequest, mockResponse);
 
-      expect(result).toEqual(expectedResult);
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.OK);
+      expect(mockResponse.json).toHaveBeenCalledWith(expectedResult);
       expect(service.findAll).toHaveBeenCalledWith(query, mockUser);
     });
   });
@@ -108,9 +123,10 @@ describe('ServiceGroupController', () => {
 
       mockServiceGroupService.findOne.mockResolvedValue(expectedServiceGroup);
 
-      const result = await controller.findOne(serviceGroupId);
+      await controller.findOne(serviceGroupId, mockResponse);
 
-      expect(result).toEqual(expectedServiceGroup);
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.OK);
+      expect(mockResponse.json).toHaveBeenCalledWith(expectedServiceGroup);
       expect(service.findOne).toHaveBeenCalledWith(serviceGroupId);
     });
   });
@@ -131,13 +147,15 @@ describe('ServiceGroupController', () => {
 
       mockServiceGroupService.update.mockResolvedValue(expectedServiceGroup);
 
-      const result = await controller.update(
+      await controller.update(
         serviceGroupId,
         updateDto,
         mockRequest,
+        mockResponse,
       );
 
-      expect(result).toEqual(expectedServiceGroup);
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.OK);
+      expect(mockResponse.json).toHaveBeenCalledWith(expectedServiceGroup);
       expect(service.update).toHaveBeenCalledWith(serviceGroupId, {
         ...updateDto,
         userId: mockUser.id,
@@ -152,9 +170,10 @@ describe('ServiceGroupController', () => {
 
       mockServiceGroupService.remove.mockResolvedValue(expectedResult);
 
-      const result = await controller.remove(serviceGroupId);
+      await controller.remove(serviceGroupId, mockResponse);
 
-      expect(result).toEqual(expectedResult);
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.OK);
+      expect(mockResponse.json).toHaveBeenCalledWith(expectedResult);
       expect(service.remove).toHaveBeenCalledWith(serviceGroupId);
     });
   });

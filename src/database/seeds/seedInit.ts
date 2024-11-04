@@ -4,13 +4,24 @@ import { ServiceGroup } from '../../modules/service-group/entities/service-group
 import { Version } from '../../modules/version/entities/version.entity';
 import * as bcrypt from 'bcrypt';
 import { EntityManager } from 'typeorm';
-import { Role } from 'src/common/interfaces';
+import { Role } from '../../common/interfaces';
+import { v4 as uuidv4 } from 'uuid';
 
 export async function seedDatabase(manager: EntityManager) {
   const userRepository = manager.getRepository(User);
   const teamRepository = manager.getRepository(Team);
   const serviceRepository = manager.getRepository(ServiceGroup);
   const versionRepository = manager.getRepository(Version);
+
+  const seedUserId = uuidv4();
+  const seedTeamId = uuidv4();
+  const seedServiceGroupId = uuidv4();
+
+  // truncate all tables
+  await manager.query('TRUNCATE TABLE "versions" CASCADE');
+  await manager.query('TRUNCATE TABLE "service_groups" CASCADE');
+  await manager.query('TRUNCATE TABLE "users" CASCADE');
+  await manager.query('TRUNCATE TABLE "teams" CASCADE');
 
   try {
     // Create Users
@@ -19,6 +30,7 @@ export async function seedDatabase(manager: EntityManager) {
     // Create Teams
     const teams = await teamRepository.save([
       teamRepository.create({
+        id: seedTeamId,
         name: 'Team Alpha',
         description: 'Alpha team description',
       }),
@@ -30,11 +42,12 @@ export async function seedDatabase(manager: EntityManager) {
 
     const users = await userRepository.save([
       userRepository.create({
+        id: seedUserId,
         username: 'alice',
         email: 'alice@example.com',
         passwordHash: passwordHash,
         roles: [Role.ADMIN],
-        teamId: teams[0].id,
+        teamId: seedTeamId,
       }),
       userRepository.create({
         username: 'bob',
@@ -92,16 +105,18 @@ export async function seedDatabase(manager: EntityManager) {
     // Create ServiceGroups
     const serviceGroups = [];
     for (let i = 0; i < 10; i++) {
-      const serviceGroup = serviceRepository.create({
-        name: `ServiceGroup ${animalNames[i]}`,
-        description: animalDescriptions[i],
-        userId: i > 7 ? users[2].id : users[i % 2].id, // Alternate between Alice and Bob
-        tags: [animalTags[i]], // Use a single tag for each service group
-      });
+      const serviceGroup = await serviceRepository.save(
+        serviceRepository.create({
+          id: i === 1 ? seedServiceGroupId : uuidv4(),
+          name: `ServiceGroup ${animalNames[i]}`,
+          description: animalDescriptions[i],
+          userId: i > 7 ? users[2].id : users[i % 2].id, // Alternate between Alice and Bob
+          tags: [animalTags[i]], // Use a single tag for each service group
+        }),
+      );
       serviceGroups.push(serviceGroup);
     }
     await serviceRepository.save(serviceGroups);
-
     // Create Versions for each ServiceGroup
     const versions = [];
     for (const serviceGroup of serviceGroups) {
@@ -120,6 +135,7 @@ export async function seedDatabase(manager: EntityManager) {
           isActive: false,
         }),
         versionRepository.create({
+          serviceGroupId: serviceGroup.id,
           version: 2,
           releaseDate: new Date('2023-10-01'),
           changelog: JSON.stringify({
@@ -134,8 +150,6 @@ export async function seedDatabase(manager: EntityManager) {
       );
     }
     await versionRepository.save(versions);
-
-    console.log('Database seeding completed.');
   } catch (error) {
     console.error('Error during database seeding:', error);
     throw error;

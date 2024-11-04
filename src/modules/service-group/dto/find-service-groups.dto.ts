@@ -1,17 +1,20 @@
-import { IsOptional, IsString, IsInt, Min } from 'class-validator';
+import { IsOptional, IsString, IsInt, Min, IsEnum } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { SortDirection } from 'typeorm';
-
+import { SortDirection } from '../../../common/constants';
 export class FindServiceGroupsDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
   search?: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({
+    required: false,
+    enum: SortDirection,
+    default: SortDirection.DESC,
+  })
   @IsOptional()
-  @IsString()
-  sort?: SortDirection;
+  @IsEnum(SortDirection)
+  sort?: SortDirection = SortDirection.DESC;
 
   @ApiProperty({ required: false, default: 1 })
   @IsOptional()

@@ -67,7 +67,7 @@ describe('UserController', () => {
 
       mockUserService.findAll.mockResolvedValue(expectedResult);
 
-      const result = await controller.findAll();
+      const result = await controller.findAll({});
 
       expect(result).toEqual(expectedResult);
       expect(service.findAll).toHaveBeenCalledTimes(1);

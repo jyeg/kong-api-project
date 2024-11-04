@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -8,6 +12,7 @@ import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
 import { Team } from '../../team/entities/team.entity';
 import { Role } from '../../../common/interfaces';
+import { UserDto } from '../../user/dto/user.dto';
 
 @Injectable()
 export class AuthService {
@@ -19,8 +24,9 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async validateUser(email: string, password: string): Promise<any> {
+  async validateUser(email: string, password: string): Promise<UserDto | null> {
     const user = await this.usersRepository.findOne({ where: { email } });
+
     if (user && (await bcrypt.compare(password, user.passwordHash))) {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { passwordHash, ...result } = user;
@@ -29,7 +35,9 @@ export class AuthService {
     return null;
   }
 
-  async login(loginDto: LoginDto) {
+  async login(
+    loginDto: LoginDto,
+  ): Promise<{ access_token: string; user: UserDto }> {
     const user = await this.validateUser(loginDto.email, loginDto.password);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
@@ -47,31 +55,47 @@ export class AuthService {
     };
   }
 
-  async register(registerDto: RegisterDto) {
-    const existingUser = await this.usersRepository.findOne({
-      where: [{ email: registerDto.email }, { username: registerDto.username }],
-    });
+  // TODO: Add role validation for the teamId
+  async register(registerDto: RegisterDto): Promise<{
+    access_token: string;
+    user: UserDto;
+  }> {
+    const { email, password, username } = registerDto;
 
-    if (existingUser) {
-      throw new UnauthorizedException('User already exists');
+    // Validate input
+    if (!email || !password || !username) {
+      throw new BadRequestException(
+        'Email, password, and username are required',
+      );
     }
 
-    const hashedPassword = await bcrypt.hash(registerDto.password, 10);
-    const user = this.usersRepository.create({
-      ...registerDto,
-      passwordHash: hashedPassword,
+    // Check if user already exists
+    const existingUser = await this.usersRepository.findOne({
+      where: { email },
+    });
+    if (existingUser) {
+      throw new BadRequestException('User already exists');
+    }
+
+    // Hash the password
+    const newPasswordHash = await bcrypt.hash(password, 10); // Ensure password is defined
+
+    const newUser = this.usersRepository.create({
+      email,
+      passwordHash: newPasswordHash,
+      username,
       roles: [Role.USER],
     });
 
     const team = await this.teamsRepository.findOne({
-      where: { id: registerDto.teamId },
+      where: { id: registerDto.teamId }, // TODO: correctly handle teamId
     });
 
     if (team) {
-      user.team = team;
+      newUser.team = team;
     }
 
-    const savedUser = await this.usersRepository.save(user);
+    const savedUser = await this.usersRepository.save(newUser);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { passwordHash, ...result } = savedUser;
 

@@ -1,10 +1,10 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class InitTables1730575653752 implements MigrationInterface {
-    name = 'InitTables1730575653752'
+  name = 'InitTables1730575653752';
 
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`
             CREATE TABLE "versions" (
                 "created_at" TIMESTAMP NOT NULL DEFAULT now(),
                 "created_by" character varying NOT NULL DEFAULT 'system',
@@ -21,11 +21,11 @@ export class InitTables1730575653752 implements MigrationInterface {
                 CONSTRAINT "PK_921e9a820c96cc2cd7d4b3a107b" PRIMARY KEY ("id")
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_UNIQUE_ACTIVE_VERSION" ON "versions" ("service_id", "is_active")
             WHERE is_active = true
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "service_groups" (
                 "created_at" TIMESTAMP NOT NULL DEFAULT now(),
                 "created_by" character varying NOT NULL DEFAULT 'system',
@@ -40,7 +40,7 @@ export class InitTables1730575653752 implements MigrationInterface {
                 CONSTRAINT "PK_c541600efebc3f4fefd3d082ef3" PRIMARY KEY ("id")
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "users" (
                 "created_at" TIMESTAMP NOT NULL DEFAULT now(),
                 "created_by" character varying NOT NULL DEFAULT 'system',
@@ -58,7 +58,7 @@ export class InitTables1730575653752 implements MigrationInterface {
                 CONSTRAINT "PK_a3ffb1c0c8416b9fc6f907b7433" PRIMARY KEY ("id")
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "team" (
                 "created_at" TIMESTAMP NOT NULL DEFAULT now(),
                 "created_by" character varying NOT NULL DEFAULT 'system',
@@ -71,46 +71,45 @@ export class InitTables1730575653752 implements MigrationInterface {
                 CONSTRAINT "PK_f57d8293406df4af348402e4b74" PRIMARY KEY ("id")
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             ALTER TABLE "versions"
             ADD CONSTRAINT "FK_961b0fd5ea2634e21a6ef6faed7" FOREIGN KEY ("service_id") REFERENCES "service_groups"("id") ON DELETE CASCADE ON UPDATE NO ACTION
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             ALTER TABLE "service_groups"
             ADD CONSTRAINT "FK_3c68de0035b536158431de9945b" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE
             SET NULL ON UPDATE NO ACTION
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             ALTER TABLE "users"
             ADD CONSTRAINT "FK_1208ee1db5ddb64b48a86b46a61" FOREIGN KEY ("team_id") REFERENCES "team"("id") ON DELETE NO ACTION ON UPDATE NO ACTION
         `);
-    }
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`
             ALTER TABLE "users" DROP CONSTRAINT "FK_1208ee1db5ddb64b48a86b46a61"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             ALTER TABLE "service_groups" DROP CONSTRAINT "FK_3c68de0035b536158431de9945b"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             ALTER TABLE "versions" DROP CONSTRAINT "FK_961b0fd5ea2634e21a6ef6faed7"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "team"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "users"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "service_groups"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP INDEX "public"."IDX_UNIQUE_ACTIVE_VERSION"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "versions"
         `);
-    }
-
+  }
 }

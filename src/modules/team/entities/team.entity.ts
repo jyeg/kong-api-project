@@ -2,7 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { AuditableEntity } from '../../../common/entities';
 
-@Entity()
+@Entity('teams')
 export class Team extends AuditableEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;

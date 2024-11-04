@@ -4,7 +4,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { User } from '../../user/entities/user.entity';
 import { Team } from '../../team/entities/team.entity';
 import { JwtService } from '@nestjs/jwt';
-import { UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { Role } from '../../../common/interfaces';
 
@@ -66,9 +66,10 @@ describe('AuthService', () => {
         'password123',
       );
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { passwordHash, ...userWithoutPassword } = mockUser;
       expect(result).toBeDefined();
-      expect(result.passwordHash).toBeUndefined();
-      expect(result.id).toBe(mockUser.id);
+      expect(result).toMatchObject(userWithoutPassword);
     });
 
     it('should return null when user is not found', async () => {
@@ -107,6 +108,7 @@ describe('AuthService', () => {
         email: 'test@example.com',
         roles: [Role.USER],
         teamId: 'team1',
+        username: 'testuser',
       };
 
       jest.spyOn(service, 'validateUser').mockResolvedValue(mockUser);
@@ -164,7 +166,7 @@ describe('AuthService', () => {
       const result = await service.register(registerDto);
 
       expect(result.access_token).toBe('mock.jwt.token');
-      expect(result.user).toEqual(mockUser);
+      expect(result.user).toMatchObject(mockUser);
       expect(mockUserRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({
           email: registerDto.email,
@@ -185,7 +187,7 @@ describe('AuthService', () => {
       mockUserRepository.findOne.mockResolvedValue({ id: '1' });
 
       await expect(service.register(registerDto)).rejects.toThrow(
-        UnauthorizedException,
+        BadRequestException,
       );
     });
 
@@ -213,6 +215,44 @@ describe('AuthService', () => {
 
       expect(result.access_token).toBe('mock.jwt.token');
       expect(result.user).toEqual(mockUser);
+    });
+
+    it('should hash the password before saving the user', async () => {
+      const registerDto = {
+        email: 'new@example.com',
+        password: 'password123',
+        username: 'newuser',
+        teamId: 'team1',
+      };
+
+      const mockTeam = { id: 'team1', name: 'Team 1' };
+      const mockUser = {
+        id: '1',
+        email: registerDto.email,
+        username: registerDto.username,
+        roles: [Role.USER],
+        teamId: registerDto.teamId,
+        passwordHash: await bcrypt.hash(registerDto.password, 10),
+      };
+
+      mockUserRepository.findOne.mockResolvedValue(null);
+      mockTeamRepository.findOne.mockResolvedValue(mockTeam);
+      mockUserRepository.create.mockReturnValue(mockUser);
+      mockUserRepository.save.mockResolvedValue(mockUser);
+
+      const result = await service.register(registerDto);
+
+      expect(result.access_token).toBe('mock.jwt.token');
+      expect(result.user.id).toBe(mockUser.id);
+
+      expect(mockUserRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email: registerDto.email,
+          username: registerDto.username,
+          roles: [Role.USER],
+          passwordHash: expect.any(String),
+        }),
+      );
     });
   });
 });

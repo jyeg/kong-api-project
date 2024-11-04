@@ -6,7 +6,8 @@ import { Team } from '../../team/entities/team.entity';
 import { EntityManager } from 'typeorm';
 import { NotFoundException } from '@nestjs/common';
 import { FindServiceGroupsDto } from '../dto/find-service-groups.dto';
-import { User } from 'src/modules/user/entities/user.entity';
+import { User } from '../../user/entities/user.entity';
+import { SortDirection } from '../../../common/constants';
 
 describe('ServiceGroupService', () => {
   let service: ServiceGroupService;
@@ -47,6 +48,7 @@ describe('ServiceGroupService', () => {
         skip: jest.fn().mockReturnThis(),
         take: jest.fn().mockReturnThis(),
         getManyAndCount: jest.fn(),
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
       }),
     };
 
@@ -118,13 +120,13 @@ describe('ServiceGroupService', () => {
     it('should filter by team ID when user has teamId', async () => {
       const query: FindServiceGroupsDto = {
         search: 'test',
-        sort: 1,
+        sort: SortDirection.ASC,
         page: 1,
         limit: 10,
       };
       const user = { teamId: 'team-1' };
 
-      const serviceGroups = [{ id: '1', name: 'Service 1' }];
+      const serviceGroups = [{ id: '1', name: 'Service 1', versions: [] }];
       mockEntityManager
         .createQueryBuilder()
         .getManyAndCount.mockResolvedValue([serviceGroups, 1]);

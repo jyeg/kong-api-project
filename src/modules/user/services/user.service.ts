@@ -14,8 +14,12 @@ export class UserService {
     return this.manager.save(user);
   }
 
-  async findAll(): Promise<User[]> {
-    return this.manager.find(User);
+  async findAll({ teamId }: { teamId?: string }): Promise<User[]> {
+    const query = this.manager.createQueryBuilder(User, 'user');
+    if (teamId) {
+      query.where('user.teamId = :teamId', { teamId });
+    }
+    return query.getMany();
   }
 
   async findOne(id: string): Promise<User> {

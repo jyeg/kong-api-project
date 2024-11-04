@@ -9,6 +9,9 @@
 - [Project Structure](#project-structure)
 - [Installation / Setup](#installation--setup)
 - [Running the project](#running-the-project)
+- [Design Considerations](#design-considerations)
+- [Assumptions](#assumptions)
+- [Trade-offs and TODOs](#trade-offs-and-todos)
 
 ## Description
 
@@ -22,14 +25,14 @@ This project is a simple API for a Kong Take Home Assignment. It is built with N
 - TypeORM
 - PostgreSQL
 - Docker
-- Redis
 
 ## Features
 
 - Service Group Search
 - Service Group CRUD
 - User Authentication/Authorization
-- Redis Caching for Service Group Search
+- End-to-end tests
+- Unit tests
 - Swagger API Documentation
 
 ## Usage
@@ -129,3 +132,97 @@ yarn start:dev
 ```bash
 yarn test
 ```
+
+### Run end-to-end tests
+
+```bash
+yarn test:e2e
+```
+
+## Design Considerations
+
+### Architecture
+
+- Followed NestJS modular architecture for clear separation of concerns
+- Used Repository pattern with TypeORM for database operations
+- Implemented Guards for basic authentication and basic authorization
+- Used DTOs for request/response data validation
+- Implemented entity-based data model with relationships (User-Team-ServiceGroup)
+
+### Security
+
+- JWT-based authentication
+- Password hashing using bcrypt
+- Role-based access control (USER, ADMIN roles)
+- Request validation using class-validator
+- Protected routes using Guards
+
+### Testing
+
+- Comprehensive unit tests for services and controllers
+- End-to-end tests for critical flows (auth, CRUD operations)
+- Mocked dependencies for isolated unit testing
+
+### API Design
+
+- RESTful endpoints following REST conventions
+- Swagger documentation for API visibility
+- Consistent error handling and responses
+- Pagination for list endpoints
+- Search and filtering capabilities
+
+## Assumptions
+
+1. **Authentication**
+
+   - Users belong to a single team at a time
+   - Email addresses and usernames are unique across the system
+
+2. **Authorization**
+
+   - Team members can only access their team's resources
+   - Service groups are owned by users within teams
+
+3. **Data Model**
+
+   - Teams have multiple users
+   - Users can create multiple service groups
+   - Service groups belong to a single user
+   - Service groups have many versions
+
+4. **Performance**
+
+   - Database queries are optimized for small to medium datasets
+   - Pagination is required for large result sets
+
+## Trade-offs and TODOs
+
+1. **Performance vs Simplicity**
+
+   - Used TypeORM QueryBuilder for complex queries instead of raw SQL
+   - Attempted to
+   - TODO: Implement more sophisticated caching strategies for high-traffic endpoints
+
+2. **Security vs Usability**
+
+   - Implemented basic JWT authentication
+   - TODO: Auth Endpoint should have better role based validation
+   - TODO: TBD on how to handle team assignment for registration endpoint
+   - TODO: Implement rate limiting for API endpoints
+
+3. **Development Speed vs Scalability**
+
+   - Used TypeORM simple search on service groups
+   - TODO: consider using full text search in version with JSONB for better search results
+   - TODO: consider using Redis for caching
+
+4. **Testing Coverage vs Time**
+
+   - Focused on critical path testing
+
+5. **Features vs Timeline**
+   - Implemented core CRUD functionality for Service Groups
+   - TODO: Edge cases for deleting resources, should be soft delete, and prevent orphan services.
+   - TODO: create a separate db for dev and another for e2e tests
+   - TODO: Add advanced search capabilities
+   - TODO: Add audit logging for all operations

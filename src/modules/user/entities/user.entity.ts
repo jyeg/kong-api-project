@@ -5,6 +5,7 @@ import {
   ManyToOne,
   OneToMany,
 } from 'typeorm';
+import { Exclude } from 'class-transformer';
 import { Team } from '../../team/entities/team.entity';
 import { AuditableEntity } from '../../../common/entities';
 import { Role } from '../../../common/interfaces';
@@ -22,6 +23,7 @@ export class User extends AuditableEntity {
   email: string;
 
   @Column()
+  @Exclude()
   passwordHash: string;
 
   @Column('simple-array')

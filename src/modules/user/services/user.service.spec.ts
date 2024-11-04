@@ -19,7 +19,18 @@ const createUserDto: CreateUserDto = {
 describe('UserService', () => {
   let service: UserService;
   let mockEntityManager: Partial<EntityManager>;
+  let mockGetMany: jest.Mock;
+
   beforeEach(async () => {
+    // Create mock getMany function
+    mockGetMany = jest.fn();
+
+    // Create a mock query builder
+    const mockQueryBuilder = {
+      where: jest.fn().mockReturnThis(),
+      getMany: mockGetMany,
+    };
+
     mockEntityManager = {
       find: jest.fn(),
       findOne: jest.fn(),
@@ -27,6 +38,7 @@ describe('UserService', () => {
       create: jest.fn().mockReturnValue(createUserDto),
       remove: jest.fn(),
       delete: jest.fn(),
+      createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -62,15 +74,34 @@ describe('UserService', () => {
   describe('findAll', () => {
     it('should return an array of users', async () => {
       const users = [
+        { id: '1', username: 'user1', teamId: '1' },
+        { id: '2', username: 'user2', teamId: '1' },
+      ];
+      mockGetMany.mockResolvedValue(users);
+
+      const result = await service.findAll({ teamId: '1' });
+
+      expect(result).toEqual(users);
+      expect(mockEntityManager.createQueryBuilder).toHaveBeenCalledWith(
+        User,
+        'user',
+      );
+    });
+
+    it('should return all users when no teamId is provided', async () => {
+      const users = [
         { id: '1', username: 'user1' },
         { id: '2', username: 'user2' },
       ];
-      jest.spyOn(mockEntityManager, 'find').mockResolvedValue(users);
+      mockGetMany.mockResolvedValue(users);
 
-      const result = await service.findAll();
+      const result = await service.findAll({});
 
       expect(result).toEqual(users);
-      expect(mockEntityManager.find).toHaveBeenCalledWith(User);
+      expect(mockEntityManager.createQueryBuilder).toHaveBeenCalledWith(
+        User,
+        'user',
+      );
     });
   });
 

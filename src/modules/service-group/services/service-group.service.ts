@@ -5,7 +5,8 @@ import { EntityManager } from 'typeorm';
 import { ServiceGroup } from '../entities/service-group.entity';
 import { FindServiceGroupsDto } from '../dto/find-service-groups.dto';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { User } from 'src/modules/user/entities/user.entity';
+import { User } from '../../user/entities/user.entity';
+import { ServiceGroupDto } from '../dto/service-group.dto';
 @Injectable()
 export class ServiceGroupService {
   constructor(@InjectEntityManager() private readonly manager: EntityManager) {}
@@ -44,10 +45,13 @@ export class ServiceGroupService {
     query: FindServiceGroupsDto,
     user: User,
     entityManager = this.manager,
-  ): Promise<[ServiceGroup[], number]> {
+  ): Promise<[ServiceGroupDto[], number]> {
     const { search, sort, page, limit } = query;
 
     const qb = entityManager.createQueryBuilder(ServiceGroup, 'serviceGroup');
+
+    // include version ids array in results
+    qb.leftJoinAndSelect('serviceGroup.versions', 'versions');
 
     // If the user is part of a team, you can also filter by team ID if needed
     if (user.teamId) {
@@ -67,19 +71,32 @@ export class ServiceGroupService {
 
     // Sorting
     if (sort) {
-      qb.orderBy('serviceGroup.name', sort === 1 ? 'ASC' : 'DESC');
+      qb.orderBy('serviceGroup.name', sort);
     }
 
     // Pagination
-    qb.skip((page - 1) * limit).take(limit);
+    if (page && limit) {
+      qb.skip((page - 1) * limit).take(limit);
+    }
 
-    return qb.getManyAndCount(); // Returns both the results and the total count
+    const [serviceGroups, total] = await qb.getManyAndCount(); // Returns both the results and the total count
+
+    return [
+      serviceGroups.map((serviceGroup) => {
+        return {
+          ...serviceGroup,
+          versions: serviceGroup.versions?.map((version) => version.id),
+        };
+      }),
+      total,
+    ];
   }
 
   async findOne(
     id: string,
     entityManager = this.manager,
   ): Promise<ServiceGroup> {
+    // TODO: filter by user team if user is part of a team?
     const serviceGroup = await entityManager.findOne(ServiceGroup, {
       where: { id },
       relations: ['versions'],
@@ -96,14 +113,22 @@ export class ServiceGroupService {
     entityManager = this.manager,
   ): Promise<ServiceGroup> {
     return entityManager.transaction(async (transactionalEntityManager) => {
+      // TODO: check if user is part of team that owns service group
+
       // get existing with versions
       const serviceGroup = await this.findOne(id, transactionalEntityManager);
 
-      // mark existing most recent active version to false
+      // mark existing all active versions to false
+      for await (const version of serviceGroup.versions) {
+        version.isActive = false;
+        await transactionalEntityManager.save(version);
+      }
+
+      // get max version number
       const mostRecentVersion = serviceGroup.versions.sort(
         (a, b) => a.version - b.version,
       )[0];
-      mostRecentVersion.isActive = false;
+
       // create a new version with content from update in changelog
       const newVersion = transactionalEntityManager.create('Version', {
         serviceGroupId: serviceGroup.id,
